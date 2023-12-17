@@ -1,6 +1,6 @@
 use std::env;
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufRead, BufReader};
 
 fn main() {
     let flags: Vec<String> = env::args().collect();
@@ -11,7 +11,12 @@ fn main() {
     let query = &flags[1];
     let path = File::open(&flags[2]).unwrap();
 
-    let _reader = BufReader::new(&path);
+    let reader = BufReader::new(&path);
+    reader.lines().enumerate().for_each(|(line_index, line)| {
+        if line.unwrap().contains(query) {
+            println!("{} found in file at line {}", query, line_index);
+        }
+    });
 
     println!("Searching for {}, in {:?}", query, path);
 }
