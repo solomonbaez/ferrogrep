@@ -10,18 +10,15 @@ fn main() {
         std::process::exit(1)
     });
 
-    let contents = BufReader::new(&config.file).lines().enumerate();
-    contents.for_each(|(line_index, line)| {
-        if line.unwrap().contains(&config.query) {
-            println!("{} found in file at line {}", config.query, line_index);
-        }
+    config.run().unwrap_or_else(|e| {
+        println!("failed to parse - {}", e);
+        std::process::exit(1)
     });
-
-    println!("Searching for {}, in {:?}", config.query, config.file);
 }
 
 struct Config {
     query: String,
+    path: String,
     file: File,
 }
 
@@ -34,10 +31,37 @@ impl Config {
             ));
         }
         let query = args[1].to_string();
+        let path = args[2].to_string();
 
-        match File::open(&args[2]) {
-            Ok(file) => Ok(Config { query, file }),
+        match File::open(&path) {
+            Ok(file) => Ok(Config { query, path, file }),
             Err(e) => Err(e),
+        }
+    }
+
+    fn run(&self) -> Result<(), std::io::Error> {
+        println!("Searching for {}, in {:?}", &self.query, &self.file);
+
+        let mut instances = 0;
+        let contents = BufReader::new(&self.file).lines().enumerate();
+        contents.for_each(|(line_index, line)| {
+            if line.unwrap().contains(&self.query) {
+                instances += 1;
+                println!("{} found in file at line {}", self.query, line_index);
+            }
+        });
+
+        if instances == 0 {
+            return Err(Error::new(
+                ErrorKind::Other,
+                format!("search error: no instances of {} found", &self.query),
+            ));
+        } else {
+            println!(
+                "Success: found {} instances of '{}' in file '{}'",
+                instances, &self.query, &self.path,
+            );
+            Ok(())
         }
     }
 }
