@@ -1,30 +1,38 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader, Error, ErrorKind};
 
-pub struct Config {
+pub struct Grep {
     query: String,
     path: String,
     contents: Vec<String>,
 }
 
-impl Config {
-    pub fn build(args: Vec<String>) -> Result<Config, std::io::Error> {
-        if args.len() != 3 {
+impl Grep {
+    pub fn build(args: Vec<String>) -> Result<Grep, std::io::Error> {
+        if args.len() < 3 {
             return Err(Error::new(
                 ErrorKind::Other,
-                "input error: please provide a query string and a filepath",
+                "input error: please provide: CASE_SENSITIVE env, query string, and filepath",
             ));
         }
         let query = args[1].to_string();
         let path = args[2].to_string();
+        let case_sensitive = std::env::var("CASE_SENSITIVE").is_ok();
 
         match File::open(&path) {
             Ok(file) => {
                 let contents: Vec<String> = BufReader::new(file)
                     .lines()
-                    .map(|line| line.unwrap())
+                    .map(|line| {
+                        let content = line.unwrap();
+                        match case_sensitive {
+                            true => content,
+                            false => content.to_lowercase(),
+                        }
+                    })
                     .collect();
-                Ok(Config {
+
+                Ok(Grep {
                     query,
                     path,
                     contents,
@@ -63,7 +71,7 @@ mod test {
         let query = "hello".to_string();
         let path = "test".to_string();
         let contents: Vec<String> = vec!["hello".to_string(), "hallo".to_string()];
-        let test_config = Config {
+        let test_config = Grep {
             query,
             path,
             contents,
@@ -76,7 +84,7 @@ mod test {
         let query = "goodbye".to_string();
         let path = "test".to_string();
         let contents: Vec<String> = vec!["hello".to_string(), "hallo".to_string()];
-        let test_config = Config {
+        let test_config = Grep {
             query,
             path,
             contents,

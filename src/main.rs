@@ -1,9 +1,9 @@
-use ferrogrep::Config;
+use ferrogrep::Grep;
 use std::env;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let config = Config::build(args).unwrap_or_else(|e| {
+    let config = Grep::build(args).unwrap_or_else(|e| {
         println!("failed to parse arguments - {}", e);
         std::process::exit(1)
     });
