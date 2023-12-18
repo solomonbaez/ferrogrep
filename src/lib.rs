@@ -4,7 +4,7 @@ use std::io::{BufRead, BufReader, Error, ErrorKind};
 pub struct Config {
     query: String,
     path: String,
-    file: File,
+    contents: Vec<String>,
 }
 
 impl Config {
@@ -19,34 +19,62 @@ impl Config {
         let path = args[2].to_string();
 
         match File::open(&path) {
-            Ok(file) => Ok(Config { query, path, file }),
+            Ok(file) => {
+                let contents: Vec<String> = BufReader::new(file)
+                    .lines()
+                    .map(|line| line.unwrap())
+                    .collect();
+                Ok(Config {
+                    query,
+                    path,
+                    contents,
+                })
+            }
             Err(e) => Err(e),
         }
     }
 
-    pub fn run(&self) -> Result<(), std::io::Error> {
+    pub fn run(&self) -> Result<bool, std::io::Error> {
         println!("Searching for {}, in {}", &self.query, &self.path);
 
         let mut instances = 0;
-        let contents = BufReader::new(&self.file).lines().enumerate();
-        contents.for_each(|(line_index, line)| {
-            if line.unwrap().contains(&self.query) {
-                instances += 1;
-                println!("{} found in file at line {}", self.query, line_index);
-            }
-        });
+        self.contents
+            .iter()
+            .enumerate()
+            .for_each(|(line_index, line)| {
+                if line.contains(&self.query) {
+                    instances += 1;
+                    println!("{} found in file at line {}", self.query, line_index);
+                }
+            });
 
         if instances == 0 {
-            return Err(Error::new(
-                ErrorKind::Other,
-                format!("search error: no instances of {} found", &self.query),
-            ));
+            println!("Failed: no instances of {} found", &self.query);
+            Ok(false)
         } else {
             println!(
                 "Success: found {} instances of '{}' in file '{}'",
                 instances, &self.query, &self.path,
             );
-            Ok(())
+            Ok(true)
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn one_result_passes() {
+        let query = "hello".to_string();
+        let path = "test".to_string();
+        let contents: Vec<String> = vec!["hello".to_string(), "hallo".to_string()];
+        let test_config = Config {
+            query,
+            path,
+            contents,
+        };
+
+        assert_eq!(true, test_config.run().unwrap());
     }
 }
