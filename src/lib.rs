@@ -34,29 +34,23 @@ impl Config {
         }
     }
 
-    pub fn run(&self) -> Result<bool, std::io::Error> {
+    pub fn run(&self) -> Result<Vec<(&str, usize)>, std::io::Error> {
         println!("Searching for {}, in {}", &self.query, &self.path);
 
-        let mut instances = 0;
-        self.contents
+        let instances: Vec<(&str, usize)> = self
+            .contents
             .iter()
             .enumerate()
-            .for_each(|(line_index, line)| {
-                if line.contains(&self.query) {
-                    instances += 1;
-                    println!("{} found in file at line {}", self.query, line_index);
-                }
-            });
+            .filter(|(_line_index, line)| line.contains(&self.query))
+            .map(|(line_index, line)| (line.as_str(), line_index))
+            .collect();
 
-        if instances == 0 {
-            println!("Failed: no instances of {} found", &self.query);
-            Ok(false)
-        } else {
-            println!(
-                "Success: found {} instances of '{}' in file '{}'",
-                instances, &self.query, &self.path,
-            );
-            Ok(true)
+        match instances.len() {
+            0 => Err(Error::new(
+                ErrorKind::Other,
+                format!("0 instances of {} found", &self.query),
+            )),
+            _ => Ok(instances),
         }
     }
 }
@@ -75,6 +69,26 @@ mod test {
             contents,
         };
 
-        assert_eq!(true, test_config.run().unwrap());
+        assert_eq!(vec![("hello", 0 as usize)], test_config.run().unwrap());
+    }
+    #[test]
+    fn no_result_fails() {
+        let query = "goodbye".to_string();
+        let path = "test".to_string();
+        let contents: Vec<String> = vec!["hello".to_string(), "hallo".to_string()];
+        let test_config = Config {
+            query,
+            path,
+            contents,
+        };
+
+        let expected_error = Error::new(
+            ErrorKind::Other,
+            format!("0 instances of {} found", &test_config.query),
+        );
+        assert_eq!(
+            expected_error.to_string(),
+            test_config.run().unwrap_err().to_string()
+        );
     }
 }

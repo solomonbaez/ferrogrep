@@ -7,8 +7,11 @@ fn main() {
         println!("failed to parse arguments - {}", e);
         std::process::exit(1)
     });
-    config.run().unwrap_or_else(|e| {
-        println!("failed to parse - {}", e);
+
+    let instances = config.run().unwrap_or_else(|e| {
+        println!("failed - {}", e);
         std::process::exit(1)
     });
+
+    println!("success - (line, location) - {:?}", instances);
 }
