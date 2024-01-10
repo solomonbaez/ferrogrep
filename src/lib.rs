@@ -24,10 +24,10 @@ impl Grep {
                 let contents: Vec<String> = BufReader::new(file)
                     .lines()
                     .map(|line| {
-                        let content = line.unwrap();
-                        match case_sensitive {
-                            true => content,
-                            false => content.to_lowercase(),
+                        if case_sensitive {
+                            line.unwrap()
+                        } else {
+                            line.unwrap().to_lowercase()
                         }
                     })
                     .collect();
